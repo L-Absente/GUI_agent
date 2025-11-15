@@ -1,0 +1,18 @@
+datasets:
+#planning/reasonning
+  - json_path: data/aguvis/train/android_control.json
+    images_folder: "android_control/images/"
+    sampling_strategy: "all"
+#13594 Trajectory
+
+#planning/reasonning
+  - json_path: data/aguvis/train/coat.json
+    images_folder: "coat/images/"
+    sampling_strategy: "all"
+#1987 Trajectory
+
+#grounding
+  - json_path: data/aguvis/train/ui_refexp.json
+    images_folder: ui_refexp/images/
+    sampling_strategy: "all"
+#16K Trajectory
