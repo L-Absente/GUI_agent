@@ -1,33 +1,30 @@
 import os
 import json
+import glob
+import re 
 import random
+from tqdm import tqdm
 from typing import List, Optional
 from PIL import Image
 from qwen_vl_utils import process_vision_info
-from transformers import Qwen2VLForConditionalGeneration, Qwen2VLProcessor
+from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 
 
 # Import your prompts
-from prompt import prompt_1
+from prompt import generate_prompt
 
 
 def load_image(image_path: str) -> Image.Image:
     """
     Load an image from a file path or URL.
     """
-    if image_path.startswith("http://") or image_path.startswith("https://"):
-        import requests
-        from io import BytesIO
-        response = requests.get(image_path)
-        image = Image.open(BytesIO(response.content)).convert("RGB")
-    else:
-        image = Image.open(image_path).convert("RGB")
+    image = Image.open(image_path).convert("RGB")
     return image
 
 
 def classify_gui_single_step(
-    model: Qwen2VLForConditionalGeneration,
-    processor: Qwen2VLProcessor,
+    model: Qwen3VLForConditionalGeneration,
+    processor: AutoProcessor,
     image_path: str,
     prompt: str,
     max_new_tokens: int = 512
@@ -75,9 +72,9 @@ def classify_gui_single_step(
     return output_text
 
 
-def classify_gui_multi_step(
-    model: Qwen2VLForConditionalGeneration,
-    processor: Qwen2VLProcessor,
+def classify_gui_multi_step_on_aguvis(
+    model: Qwen3VLForConditionalGeneration,
+    processor: AutoProcessor,
     image_paths: List[str],
     prompt: str,
     max_new_tokens: int = 512
@@ -107,21 +104,30 @@ def classify_gui_multi_step(
         # Select a random middle image, ensuring it's not the first or last
         middle_index = random.randint(1, len(image_paths) - 2)
         middle_image = load_image(image_paths[middle_index])
-    else:
-        # If only two images, use the last one again as the 'middle' one
-        middle_image = last_image
-
-    messages = [
+        
+        messages = [
         {
             "role": "user",
             "content": [
                 {"type": "image", "image": first_image},
                 {"type": "image", "image": middle_image},
                 {"type": "image", "image": last_image},
-                {"type": "text", "text": prompt}
-            ]
+                {"type": "text", "text": prompt},
+            ],
         }
-    ]
+        ]
+    else:
+        # If only two images, use the last one again as the 'middle' one
+        messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "image": first_image},
+                {"type": "image", "image": last_image},
+                {"type": "text", "text": prompt},
+            ],
+        }
+        ]
 
     # Process the vision and text information
     image_inputs, video_inputs = process_vision_info(messages)
@@ -145,65 +151,100 @@ def classify_gui_dataset(
     model_path: str,
     dataset_path: str,
     output_file: str,
-    prompt: str = prompt_1,
     max_new_tokens: int = 512
 ):
     """
-    Classifies a GUI dataset containing both single-step and multi-step entries.
+    Classifies a GUI dataset containing trajectory data.
+    
+    New dataset format features:
+    - Each JSON file represents a complete trajectory (e.g., trajectory_1.json)
+    - task_id is derived from the filename without extension (e.g., "trajectory_1")
+    - 'image' field in each entry can be either a string or a list of strings
+    - Instruction is embedded in the human conversation value and is consistent across all steps in a trajectory
+    - We extract instruction from the first human conversation in the trajectory
 
     Args:
         model_path: Path to the pre-trained Qwen2VL model.
-        dataset_path: Path to the directory containing the dataset JSON file.
+        dataset_path: Path to the directory containing the dataset JSON files.
         output_file: Path to save the classification results.
-        prompt: The prompt to use for classification.
         max_new_tokens: Maximum number of new tokens to generate for each response.
     """
+    
     # Load the model and processor
     print(f"Loading model from {model_path}...")
-    model = Qwen2VLForConditionalGeneration.from_pretrained(model_path)
-    processor = Qwen2VLProcessor.from_pretrained(model_path)
-    model.to("cuda") # or "cpu" if GPU is not available
+    model = Qwen3VLForConditionalGeneration.from_pretrained(model_path)
+    processor = AutoProcessor.from_pretrained(model_path)
+    model.to("cuda")  # or "cpu" if GPU is not available
     model.eval()
 
-    # Assuming your dataset is in a JSON file named 'dataset.json'
-    # Modify the loading logic based on your actual dataset format
-    dataset_file = os.path.join(dataset_path, "dataset.json")
-    with open(dataset_file, 'r', encoding='utf-8') as f:
-        data_entries = json.load(f)
-
+    # Get all JSON files in the dataset path
+    dataset_jsons = glob.glob(os.path.join(dataset_path, "*.json"))
     results = []
-
-    for entry in data_entries:
-        task_id = entry['task_id'] # Assuming each entry has a unique ID
-        task_type = entry['task_type'] # e.g., 'single-step' or 'multi-step'
-        image_paths = entry['screenshots'] # List of image paths
-
-        print(f"Processing task {task_id} of type {task_type}...")
-
+    dataset = dataset_path.split('/')[-1]
+    
+    for dataset_json in tqdm(dataset_jsons, desc=f"Processing trajectories of {dataset}"):
+        # Extract task_id from filename (e.g., trajectory_1.json -> "trajectory_1")
+        filename = os.path.basename(dataset_json)
+        task_id = os.path.splitext(filename)[0]
+        
+        print(f"Processing trajectory: {task_id}")
+        
         try:
-            if task_type == 'single-step':
-                # Perform single-step classification
-                result = classify_gui_single_step(model, processor, image_paths[0], prompt, max_new_tokens)
-            elif task_type == 'multi-step':
-                # Perform multi-step classification
-                result = classify_gui_multi_step(model, processor, image_paths, prompt, max_new_tokens)
-            else:
-                print(f"Warning: Unknown task type '{task_type}' for task {task_id}. Skipping.")
-                continue
-
+            with open(dataset_json, 'r', encoding='utf-8') as f:
+                trajectory_data = json.load(f)
+            
+            # Extract instruction from the first human conversation in the trajectory
+            instruction = None
+            for entry in trajectory_data:
+                for conv in entry['conversations']:
+                    if conv['from'] == 'human':
+                        human_value = conv['value']
+                        # Extract instruction using regex pattern
+                        instruction_match = re.search(r'Instruction:\s*(.*?)(?:\n\n|$)', human_value)
+                        if instruction_match:
+                            instruction = instruction_match.group(1).strip()
+                        break
+                if instruction:
+                    break
+            
+            if instruction is None:
+                raise ValueError(f"No instruction found in any human conversation for {task_id}")
+            
+            print(f"Extracted instruction: {instruction}")
+            
+            # Collect all image paths from the trajectory
+            image_paths = []
+            for entry in trajectory_data:
+                images = entry['image']
+                if isinstance(images, str):
+                    image_paths.append(images)
+                elif isinstance(images, list):
+                    image_paths.extend(images)
+                else:
+                    raise ValueError(f"Unsupported image format in {task_id}: {type(images)}")
+            
+            print(f"Found {len(image_paths)} images in trajectory")
+            
+            # Generate prompt based on instruction
+            prompt = generate_prompt(instruction)
+            
+            # Perform multi-step classification on the entire trajectory
+            result = classify_gui_multi_step_on_aguvis(model, processor, image_paths, prompt, max_new_tokens)
+            
             results.append({
                 "task_id": task_id,
-                "task_type": task_type,
+                "instruction": instruction,
                 "classification_result": result
             })
 
         except Exception as e:
-            print(f"Error processing task {task_id}: {e}")
+            print(f"Error processing trajectory {task_id}: {e}")
             results.append({
                 "task_id": task_id,
-                "task_type": task_type,
+                "instruction": instruction,
                 "error": str(e)
             })
+            continue
 
     # Save the results
     print(f"Saving results to {output_file}...")
@@ -211,6 +252,7 @@ def classify_gui_dataset(
         json.dump(results, f, ensure_ascii=False, indent=4)
 
     print("Classification complete.")
+    print(f"Processed {len(results)} trajectories.")
 
 
 # Example Usage:
@@ -224,6 +266,5 @@ classify_gui_dataset(
     model_path=MODEL_PATH,
     dataset_path=DATASET_PATH,
     output_file=OUTPUT_FILE,
-    prompt=prompt_1, # Using the prompt you provided
     max_new_tokens=512
 )

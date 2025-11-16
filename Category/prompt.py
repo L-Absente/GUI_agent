@@ -40,38 +40,55 @@ SETTING_TASKS_2 = """**Task Categories with Clear Definitions and Specific Examp
    *Must contain: content listings, navigation menus, or browsing interfaces without heavy data manipulation*
    Examples: Main application menus, content category listings, file browsers, document libraries, news/article feeds, search result pages"""
 
+def generate_prompt(instruction):
+    """
+    Generate a prompt that combines the given instruction with GUI screenshot analysis
+    for task category classification.
+    
+    Args:
+        instruction (str): The instruction from the dataset that describes the task
+        
+    Returns:
+        str: The generated prompt with both instruction and GUI analysis requirements
+    """
+    return f"""You are an expert GUI classifier. Your task is to analyze the provided screenshot of a graphical user interface along with the user instruction, and classify the interaction into one of the predefined task categories based on both the visual interface and the intended action.
 
-
-prompt_1 = f"""You are an expert GUI classifier. Your task is to analyze the provided screenshot of a graphical user interface and classify it into one of the predefined task categories based on its primary purpose and functionality.
+**User Instruction:**
+"{instruction}"
 
 {SETTING_TASKS_2}
 
 **Classification Instructions:**
-1. Carefully examine the GUI screenshot, focusing on the primary purpose, layout, and key interactive elements
-2. Identify which main category (1-5 above) best describes the screenshot's primary function
-3. Consider the examples provided for each category to understand the scope and boundaries
-4. Provide detailed reasoning that references specific visual elements and explains why this category is the best fit
-5. Follow the exact output format specified below
+1. Carefully examine both the GUI screenshot AND the user instruction together
+2. Consider how the instruction relates to the visible interface elements and their functionality
+3. Identify which main category (1-5 above) best describes the combined context of the instruction and GUI
+4. Consider the examples provided for each category to understand the scope and boundaries
+5. Provide detailed reasoning that references:
+   - Specific visual elements in the GUI
+   - How the instruction interacts with or relates to these elements
+   - Why this category is the best fit for the combined instruction-GUI context
+6. Follow the exact output format specified below
 
 **Output Format:**
-- If the GUI clearly belongs to one of the predefined categories:
+- If the GUI and instruction clearly belong to one of the predefined categories:
 Classification: [Category Name]
-Reasoning: [Detailed explanation referencing specific UI elements, layout patterns, and functional purpose that justify this classification]
+Reasoning: [Detailed explanation referencing specific UI elements, the instruction content, and how they work together to justify this classification]
 
-- If the GUI does not fit well into any predefined category:
+- If the combination does not fit well into any predefined category:
 Classification: Other
 Suggested Category: [Proposed category name that captures the primary function]
-Reasoning: [Explanation of why existing categories don't fit and how your suggested category better describes this interface]
+Reasoning: [Explanation of why existing categories don't fit and how your suggested category better describes this instruction-GUI combination]
 
 **Critical Guidelines:**
-- Focus on the PRIMARY function of the interface, not secondary features
-- Use the examples as concrete guides for category boundaries - if it looks and functions like the examples, it belongs in that category
-- Base your reasoning on visible elements only: buttons, text fields, navigation menus, charts, forms, labels, and overall layout
-- Do not make assumptions about backend functionality that isn't visually apparent
-- If multiple categories seem plausible, choose the one whose examples most closely match the screenshot's purpose
-- Be specific in your reasoning - reference actual UI elements you can see (e.g., "login button and password field" not just "authentication elements")
-- Maintain objectivity and avoid personal interpretations not supported by visual evidence
+- Focus on the PRIMARY function that emerges from combining the instruction with the GUI interface
+- Use the examples as concrete guides for category boundaries - if the instruction-GUI combination looks and functions like the examples, it belongs in that category
+- Base your reasoning on visible elements only: buttons, text fields, navigation menus, charts, forms, labels, and overall layout, combined with the instruction's intent
+- Do not make assumptions about backend functionality that isn't visually apparent or explicitly stated in the instruction
+- If multiple categories seem plausible, choose the one whose examples most closely match the combined purpose of the instruction and GUI
+- Be specific in your reasoning - reference actual UI elements you can see AND how the instruction relates to them
+- Maintain objectivity and avoid personal interpretations not supported by visual evidence or the instruction content
+- The instruction provides context for how the user intends to interact with the interface, which may change the classification from what the GUI alone would suggest
 
 **Important:** Your output must follow the exact format specified above. Only output the classification result and reasoning - no additional text, explanations, or formatting.
 
-Analyze the screenshot thoroughly and provide your classification now."""
+Analyze both the instruction and the screenshot thoroughly and provide your classification now."""

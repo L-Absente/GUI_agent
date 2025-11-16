@@ -207,7 +207,7 @@ def split_trajectories(input_file_path, output_dir):
 
     # 保存轨迹到单独的文件
     for i, traj in enumerate(trajectories):
-        output_filename = os.path.join(output_dir, f"trajectory_{i+1:04d}.json")
+        output_filename = os.path.join(output_dir, f"trajectory_{i+1}.json")
         with open(output_filename, 'w', encoding='utf-8') as out_f:
             # 写入整个 traj 数组作为一个 JSON 对象
             json.dump(traj, out_f, ensure_ascii=False, indent=2)
@@ -216,9 +216,10 @@ def split_trajectories(input_file_path, output_dir):
 
 if __name__ == "__main__":
     
-    selected_datasets = ['coat.json',
-                         'android_control.json'
-                         ]
+    selected_datasets = [
+        'coat.json',
+        'android_control.json'
+        ]
     for dataset in selected_datasets:
         print(f"Processing dataset: {dataset}")
         input_file_path = "/mnt/home/user14/archive/zhangyaoyin/datasets/aguvis-stage2/" + dataset
