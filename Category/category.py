@@ -258,7 +258,7 @@ def classify_gui_dataset(
 # Example Usage:
 # Define paths
 MODEL_PATH = "/mnt/home/user14/archive/zhangyaoyin/model/qwen3-VL-8B-Instruct" # Or your specific model path [[4]]
-DATASET_PATH = "./data/sample_data.yaml" # Path to your dataset directory containing the JSON file
+DATASET_PATH = "/mnt/home/user14/archive/zhangyaoyin/datasets/aguvis-stage2/processed_dataset/coat" # Path to your dataset directory containing the JSON file
 OUTPUT_FILE = "./results/classification_results.json"
 
 # Run the classification
