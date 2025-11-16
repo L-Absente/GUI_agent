@@ -1,7 +1,7 @@
 
 
 
-SETTING_TASKS = """**Task Categories with Explanations and Examples:**
+SETTING_TASKS_1 = """**Task Categories with Explanations and Examples:**
 
 1. **User Authentication** - Screens focused on verifying user identity and managing access permissions
    Examples: Login pages, registration forms, password reset interfaces, two-factor authentication setups, account recovery flows, single sign-on (SSO) screens
@@ -18,10 +18,33 @@ SETTING_TASKS = """**Task Categories with Explanations and Examples:**
 5. **Navigation & Workflow** - Screens that guide users through multi-step processes, provide navigation structures, or facilitate task completion flows
    Examples: Onboarding tutorials, checkout processes, wizard interfaces, menu systems, breadcrumb navigation, task management interfaces, workflow automation setups"""
 
+SETTING_TASKS_2 = """**Task Categories with Clear Definitions and Specific Examples:**
+
+1. **Authentication & Security** - Screens exclusively focused on user identity verification and access control
+   *Must contain: login fields, registration forms, or security verification elements*
+   Examples: Username/password login screens, biometric authentication prompts, password change forms, 2FA setup pages, account lockout screens
+
+2. **Data Creation & Editing** - Interfaces primarily for inputting, modifying, or deleting specific data records
+   *Must contain: form fields, input controls, or edit/delete actions for specific data items*
+   Examples: User profile edit forms, product creation dialogs, document editors, data entry forms, record update interfaces
+
+3. **Data Visualization & Analysis** - Screens dominated by charts, graphs, tables, or analytical tools
+   *Must contain: visual data representations like charts, graphs, or analytical dashboards*
+   Examples: Sales dashboard with charts, analytics reports with graphs, data monitoring displays, business intelligence dashboards, statistical visualization interfaces
+
+4. **System Configuration** - Interfaces for modifying application settings, preferences, or system parameters
+   *Must contain: settings toggles, configuration options, or system management controls*
+   Examples: Application settings panels, user permission management screens, notification configuration pages, API settings interfaces, system preference dialogs
+
+5. **Content Browsing & Navigation** - Screens primarily for viewing content, navigating between sections, or browsing information
+   *Must contain: content listings, navigation menus, or browsing interfaces without heavy data manipulation*
+   Examples: Main application menus, content category listings, file browsers, document libraries, news/article feeds, search result pages"""
+
+
 
 prompt_1 = f"""You are an expert GUI classifier. Your task is to analyze the provided screenshot of a graphical user interface and classify it into one of the predefined task categories based on its primary purpose and functionality.
 
-{SETTING_TASKS}
+{SETTING_TASKS_2}
 
 **Classification Instructions:**
 1. Carefully examine the GUI screenshot, focusing on the primary purpose, layout, and key interactive elements
